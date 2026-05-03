@@ -1,18 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Zap, Book, User, Activity, MessageCircle, Sparkles } from 'lucide-react';
-import { findSynchronicities } from '../api/client';
-
-interface Resource {
-  title: string;
-  insight: string;
-}
-
-interface SynchronicityData {
-  resources: Resource[];
-  practice: string;
-  question: string;
-  connection: string;
-}
+import { findSynchronicities, SynchronicityData } from '../api/client';
 
 const SynchronicityEngine: React.FC = () => {
   const [interest, setInterest] = useState('');

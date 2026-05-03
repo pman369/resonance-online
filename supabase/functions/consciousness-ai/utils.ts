@@ -8,23 +8,28 @@ export const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Rate limiting store (in-memory, per IP)
-const rateLimitStore = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+const RATE_LIMIT_MAX = 10; // Reduced from 30 to 10 for AI sustainability
 
-export function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  if (!rateLimitStore.has(ip)) {
-    rateLimitStore.set(ip, []);
+export async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      client_ip: ip,
+      max_requests: RATE_LIMIT_MAX,
+      window_minutes: RATE_LIMIT_WINDOW_MINUTES
+    });
+    
+    if (error) {
+      console.error('Rate limit RPC error:', error);
+      // Fail open if the RPC fails so we don't break the app
+      return true;
+    }
+    
+    return !!data;
+  } catch (err) {
+    console.error('Rate limit check failed:', err);
+    return true;
   }
-  const requests = rateLimitStore.get(ip)!.filter(time => now - time < RATE_LIMIT_WINDOW);
-  if (requests.length >= RATE_LIMIT_MAX) {
-    return false;
-  }
-  requests.push(now);
-  rateLimitStore.set(ip, requests);
-  return true;
 }
 
 // Helper to call Perplexity API

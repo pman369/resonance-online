@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Globe, Heart, Users, TrendingUp, Activity, Plus, Clock, Sparkles } from 'lucide-react';
 import { loadFeed } from '../api/client';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/AuthContext';
 
 interface FeedItem {
   category: string;
@@ -30,6 +31,7 @@ const categoryIcons: Record<string, React.ElementType> = {
 };
 
 const CollectiveCoherence: React.FC = () => {
+  const { user } = useAuth();
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,30 +40,45 @@ const CollectiveCoherence: React.FC = () => {
   const [practiceLog, setPracticeLog] = useState('');
   const [practices, setPractices] = useState<Array<{ text: string; timestamp: Date }>>([]);
 
-  // Subscribe to real-time metrics
+  // Subscribe to real-time metrics and presence
   useEffect(() => {
     const fetchInitial = async () => {
       const { data } = await supabase.from('global_metrics').select('*').eq('id', 'current').single();
       if (data) {
         setGlobalCoherence(data.coherence_score);
-        setActiveParticipants(data.active_participants);
       }
     };
     
     fetchInitial();
 
-    const channel = supabase
-      .channel('live_metrics')
+    const channel = supabase.channel('live_metrics', {
+      config: {
+        presence: {
+          key: user?.id || 'anonymous',
+        },
+      },
+    });
+
+    channel
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'global_metrics', filter: "id=eq.current" }, (payload) => {
         setGlobalCoherence(payload.new.coherence_score);
-        setActiveParticipants(payload.new.active_participants);
       })
-      .subscribe();
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        setActiveParticipants(Object.keys(state).length);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED' && user) {
+          await channel.track({
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   const addPractice = () => {
     if (practiceLog.trim()) {

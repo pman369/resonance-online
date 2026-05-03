@@ -181,15 +181,3 @@ Respond ONLY with valid JSON in this exact format:
   );
 }
 
-export async function handleGenerate(body: any) {
-  const { prompt, systemContext } = body;
-  if (!prompt) {
-    throw new Error("Prompt is required");
-  }
-
-  const systemMessage = systemContext
-    ? `${systemContext}\n\nRESPOND ONLY WITH VALID JSON. NO OTHER TEXT. NO MARKDOWN FORMATTING.`
-    : "RESPOND ONLY WITH VALID JSON. NO OTHER TEXT. NO MARKDOWN FORMATTING.";
-
-  return await callPerplexity(systemMessage, prompt);
-}

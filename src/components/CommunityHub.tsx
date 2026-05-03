@@ -92,6 +92,25 @@ const CommunityHub: React.FC = () => {
     }
   };
 
+  const handleLike = async (storyId: string, currentLikes: number) => {
+    if (!user) return;
+    try {
+      // Optimistic update
+      setStories(stories.map(s => s.id === storyId ? { ...s, likes_count: s.likes_count + 1 } : s));
+      
+      const { error } = await supabase
+        .from('stories')
+        .update({ likes_count: currentLikes + 1 })
+        .eq('id', storyId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error liking story:', err);
+      // Revert on error
+      fetchStories();
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -183,7 +202,10 @@ const CommunityHub: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between items-center pt-4 border-t border-resonance-border">
-                  <button className="flex items-center gap-2 text-resonance-muted hover:text-resonance-gold transition-colors">
+                  <button 
+                    onClick={() => handleLike(story.id, story.likes_count)}
+                    className="flex items-center gap-2 text-resonance-muted hover:text-resonance-gold transition-colors"
+                  >
                     <Heart size={16} />
                     <span className="text-xs font-ui">{story.likes_count}</span>
                   </button>

@@ -1,13 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { BookOpen, Clock, Lightbulb, RotateCcw, Sparkles } from 'lucide-react';
-import { getWisdom } from '../api/client';
-
-interface WisdomData {
-  teaching: string;
-  practice: string;
-  reframe: string;
-  tradition: string;
-}
+import { getWisdom, WisdomData } from '../api/client';
 
 const AncientWisdom: React.FC = () => {
   const [situation, setSituation] = useState('');

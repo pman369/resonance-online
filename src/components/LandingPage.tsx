@@ -55,16 +55,20 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, blu
 };
 
 const AuthModule: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(false);
+  const [isLogin, setIsLogin] = useState(true); // Default to login as it's cleaner
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
 
     try {
       if (isLogin) {
@@ -82,115 +86,139 @@ const AuthModule: React.FC = () => {
           },
         });
         if (error) throw error;
-        alert('Check your email for the confirmation link! ✨');
+        setSuccessMsg('Check your email for the confirmation link! ✨');
       }
     } catch (err: any) {
-      alert(err.message);
+      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div id="auth" className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto py-24 px-6 border-t border-resonance-border">
-      {/* Sign Up Panel */}
-      <div className={`${isLogin ? 'hidden md:block opacity-40' : 'block'} transition-opacity duration-500`}>
-        <span className="text-[11px] font-ui uppercase tracking-[0.2em] text-resonance-muted mb-2 block">New to Resonance?</span>
-        <h2 className="text-3xl font-display text-resonance-cream mb-8">Create your account.</h2>
+    <div id="auth" className="py-24 px-6 border-t border-resonance-border bg-resonance-bg/50">
+      <div className="max-w-md mx-auto relative">
+        {/* Decorative background element */}
+        <div className="absolute -inset-4 bg-gradient-to-tr from-resonance-gold/10 via-transparent to-resonance-gold/5 rounded-[40px] blur-xl pointer-events-none" />
         
-        <form onSubmit={handleAuth} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full bg-resonance-bg border border-resonance-border rounded-lg px-4 py-3 text-resonance-cream font-ui text-sm focus:outline-none focus:border-resonance-gold transition-colors"
-          />
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-resonance-bg border border-resonance-border rounded-lg px-4 py-3 text-resonance-cream font-ui text-sm focus:outline-none focus:border-resonance-gold transition-colors"
-            required
-          />
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-resonance-bg border border-resonance-border rounded-lg px-4 py-3 text-resonance-cream font-ui text-sm focus:outline-none focus:border-resonance-gold transition-colors"
-              required
-            />
-            <button 
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-resonance-muted"
+        <motion.div 
+          layout
+          className="relative bg-resonance-surface border border-resonance-border rounded-[32px] p-8 md:p-10 shadow-2xl overflow-hidden"
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={isLogin ? 'login' : 'signup'}
+              initial={{ opacity: 0, x: isLogin ? -20 : 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: isLogin ? 20 : -20 }}
+              transition={{ duration: 0.3 }}
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <input type="checkbox" className="w-4 h-4 bg-resonance-bg border-resonance-border rounded accent-resonance-gold" required />
-            <span className="text-[12px] text-resonance-muted font-ui">
-              I've read and accept the <span className="text-resonance-gold group-hover:underline">Resonance Community Agreement</span>
-            </span>
-          </label>
-          <button 
-            type="submit" 
-            disabled={loading || isLogin}
-            className="w-full py-4 bg-resonance-gold text-resonance-bg font-ui font-semibold rounded-full hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
-          >
-            {loading ? 'Joining...' : 'Join Resonance'}
-          </button>
-          <p className="text-[10px] text-resonance-muted leading-relaxed">
-            By joining, you agree to our Terms and Privacy Policy. Resonance does not sell your data or share your content without consent.
-          </p>
-        </form>
-      </div>
+              <div className="text-center mb-8">
+                <span className="text-[10px] font-ui uppercase tracking-[0.3em] text-resonance-gold mb-2 block font-bold">
+                  {isLogin ? 'Welcome Back' : 'Connection Hub'}
+                </span>
+                <h2 className="text-3xl font-display text-resonance-cream">
+                  {isLogin ? 'Re-enter the Field' : 'Initialize Connection'}
+                </h2>
+              </div>
 
-      {/* Sign In Panel */}
-      <div className={`${!isLogin ? 'hidden md:block opacity-40' : 'block'} transition-opacity duration-500`}>
-        <span className="text-[11px] font-ui uppercase tracking-[0.2em] text-resonance-muted mb-2 block">Already a member?</span>
-        <h2 className="text-3xl font-display text-resonance-cream mb-8">Welcome back.</h2>
-        
-        <form onSubmit={handleAuth} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-resonance-bg border border-resonance-border rounded-lg px-4 py-3 text-resonance-cream font-ui text-sm focus:outline-none focus:border-resonance-gold transition-colors"
-            required
-          />
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-resonance-bg border border-resonance-border rounded-lg px-4 py-3 text-resonance-cream font-ui text-sm focus:outline-none focus:border-resonance-gold transition-colors"
-              required
-            />
-          </div>
-          <div className="flex justify-between items-center text-[12px]">
-            <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-resonance-gold hover:underline md:hidden">
-              {isLogin ? "Don't have an account? Join" : "Already have an account? Sign In"}
-            </button>
-            <button type="button" className="text-resonance-gold hover:underline">Forgot password?</button>
-          </div>
-          <button 
-            type="submit" 
-            disabled={loading || !isLogin}
-            className="w-full py-4 bg-transparent border border-resonance-cream text-resonance-cream font-ui font-semibold rounded-full hover:bg-resonance-cream hover:text-resonance-bg transition-all active:scale-[0.98] disabled:opacity-50"
-          >
-            {loading ? 'Entering...' : 'Sign In'}
-          </button>
-          <button type="button" onClick={() => setIsLogin(true)} className={`text-resonance-gold text-xs hover:underline mt-4 block md:hidden`}>
-            Already a member? Sign in here.
-          </button>
-        </form>
+              {(errorMsg || successMsg) && (
+                <div className={`mb-6 p-4 rounded-xl text-[11px] font-ui uppercase tracking-widest text-center border ${
+                  errorMsg ? 'bg-resonance-danger/10 border-resonance-danger/20 text-resonance-danger' : 'bg-resonance-gold/10 border-resonance-gold/20 text-resonance-gold'
+                }`}>
+                  {errorMsg || successMsg}
+                </div>
+              )}
+
+              <form onSubmit={handleAuth} className="space-y-4">
+                {!isLogin && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-ui uppercase tracking-widest text-resonance-muted ml-1">Username</label>
+                    <input
+                      type="text"
+                      placeholder="Identified as..."
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full bg-resonance-bg/50 border border-resonance-border rounded-xl px-4 py-3 text-resonance-cream font-ui text-sm focus:outline-none focus:border-resonance-gold/50 transition-all"
+                      required={!isLogin}
+                    />
+                  </div>
+                )}
+                
+                <div className="space-y-1">
+                  <label className="text-[10px] font-ui uppercase tracking-widest text-resonance-muted ml-1">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="name@energy.field"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-resonance-bg/50 border border-resonance-border rounded-xl px-4 py-3 text-resonance-cream font-ui text-sm focus:outline-none focus:border-resonance-gold/50 transition-all"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-ui uppercase tracking-widest text-resonance-muted ml-1">Secure Key</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-resonance-bg/50 border border-resonance-border rounded-xl px-4 py-3 text-resonance-cream font-ui text-sm focus:outline-none focus:border-resonance-gold/50 transition-all"
+                      required
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-resonance-muted hover:text-resonance-gold transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                {!isLogin && (
+                  <label className="flex items-center gap-3 cursor-pointer group mt-4">
+                    <input type="checkbox" className="w-4 h-4 bg-resonance-bg border-resonance-border rounded accent-resonance-gold" required />
+                    <span className="text-[11px] text-resonance-muted font-ui">
+                      I accept the <span className="text-resonance-gold group-hover:underline">Collective Agreement</span>
+                    </span>
+                  </label>
+                )}
+
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full mt-6 py-4 bg-resonance-gold text-resonance-bg font-ui font-bold uppercase tracking-widest text-xs rounded-full hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 group"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-resonance-bg border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>{isLogin ? 'Enter Field' : 'Begin Journey'}</span>
+                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div className="mt-8 pt-6 border-t border-resonance-border/50 text-center">
+                <button 
+                  type="button" 
+                  onClick={() => { setIsLogin(!isLogin); setEmail(''); setPassword(''); setUsername(''); }}
+                  className="text-[11px] font-ui uppercase tracking-[0.2em] text-resonance-muted hover:text-resonance-gold transition-colors"
+                >
+                  {isLogin ? (
+                    <span className="flex items-center gap-2">New to the collective? <span className="text-resonance-gold font-bold">Join here</span></span>
+                  ) : (
+                    <span className="flex items-center gap-2">Already resonated? <span className="text-resonance-gold font-bold">Sign In</span></span>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
       </div>
     </div>
   );

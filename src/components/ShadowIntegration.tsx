@@ -1,14 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Moon, Heart, Shield, Lightbulb, UserCheck, AlertTriangle, Sparkles } from 'lucide-react';
-import { exploreShadow } from '../api/client';
-
-interface ShadowData {
-  reflection: string;
-  origin: string;
-  explorationQuestion: string;
-  reframe: string;
-  seekSupport: string;
-}
+import { exploreShadow, ShadowData } from '../api/client';
 
 const ShadowIntegration: React.FC = () => {
   const [prompt, setPrompt] = useState('');

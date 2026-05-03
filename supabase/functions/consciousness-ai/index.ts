@@ -10,28 +10,23 @@ serve(async (req) => {
   }
 
   try {
-    // Get client IP for rate limiting
-    const clientIP = req.headers.get("x-forwarded-for") || 
-                     req.headers.get("x-real-ip") || 
-                     "unknown";
+    const url = new URL(req.url);
+    const path = url.pathname.replace("/consciousness-ai", "");
 
-    // Check rate limit
-    if (!checkRateLimit(clientIP)) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please slow down and take a breath. 🌬️" }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // 1. Unauthenticated endpoints (Health Check)
+    if (path === "/health") {
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          status: "ok",
+          message: "Resonance Edge Function is running",
+          aiAvailable: !!PERPLEXITY_API_KEY,
+          timestamp: new Date().toISOString()
+        }
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Verify authentication
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Authentication required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
+    // 2. Initialize Supabase Admin Client
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
@@ -40,6 +35,29 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // 3. Database-backed Rate Limiting
+    const clientIP = req.headers.get("x-forwarded-for") || 
+                     req.headers.get("x-real-ip") || 
+                     "unknown";
+
+    const isAllowed = await checkRateLimit(supabase, clientIP);
+    if (!isAllowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please slow down and take a breath. 🌬️" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 4. Verify Authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
@@ -50,10 +68,7 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body and path
-    const url = new URL(req.url);
-    const path = url.pathname.replace("/consciousness-ai", "");
-    
+    // 5. Parse body and route logic
     let body = {};
     if (req.method === "POST") {
       body = await req.json();
@@ -61,49 +76,25 @@ serve(async (req) => {
 
     let result;
 
-    // Route to appropriate handler based on path
     switch (path) {
-      case "/health": {
-        result = {
-          success: true,
-          data: {
-            status: "ok",
-            message: "Resonance Edge Function is running",
-            aiAvailable: !!PERPLEXITY_API_KEY,
-            timestamp: new Date().toISOString()
-          }
-        };
-        break;
-      }
-
       case "/consciousness/map":
         result = await handlers.handleConsciousnessMap(body);
         break;
-
       case "/synchronicity":
         result = await handlers.handleSynchronicity(body);
         break;
-
       case "/wisdom":
         result = await handlers.handleWisdom(body);
         break;
-
       case "/shadow":
         result = await handlers.handleShadow(body);
         break;
-
       case "/feed":
         result = await handlers.handleFeed();
         break;
-
       case "/intention":
         result = await handlers.handleIntention();
         break;
-
-      case "/generate":
-        result = await handlers.handleGenerate(body);
-        break;
-
       default:
         return new Response(
           JSON.stringify({
@@ -120,7 +111,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Edge Function Error:", error);
-    
     const status = error.message?.includes("Unauthorized") || error.message?.includes("log in") ? 401 : 500;
     
     return new Response(

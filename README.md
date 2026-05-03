@@ -52,17 +52,11 @@ Create a `.env` file in the project root:
 # Supabase Configuration (get from your Supabase project)
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-
-# Backend API URL
-VITE_API_URL=http://localhost:3001/api
-
-# (Optional) For AI features - get from https://makersuite.google.com/app/apikey
-GEMINI_API_KEY=your-gemini-api-key
 ```
 
 ### 3. Set Up Supabase Backend
 
-Follow the complete setup guide in `resonance-supabase-setup.md` or:
+Follow these steps:
 
 1. Create a new Supabase project
 2. Run the SQL migrations to create tables
@@ -79,19 +73,8 @@ npx supabase db push
 
 ### 4. Run the Application
 
-**Frontend only:**
 ```bash
 npm run dev
-```
-
-**Backend only:**
-```bash
-npm run server
-```
-
-**Both simultaneously:**
-```bash
-npm run dev:all
 ```
 
 The app will be available at `http://localhost:5173`
@@ -133,17 +116,21 @@ npm run build
     ┌────┴────┐
     │         │
     ▼         ▼
-┌─────────┐ ┌──────────────┐
-│Supabase │ │  Backend     │
-│  Auth   │ │  (Express)   │
-│  DB     │ │  (Optional)  │
-└─────────┘ └──────┬───────┘
-                   │
-                   ▼
-            ┌─────────────┐
-            │  Gemini AI  │
-            │   (Google)  │
-            └─────────────┘
+┌─────────┐
+│Supabase │
+│  Auth   │
+│  DB     │
+│  Edge   │
+│  Funcs  │
+└────┬────┘
+     │
+     ▼
+┌─────────────┐
+│  AI APIs    │
+│ (Perplexity,│
+│  Gemini,    │
+│  etc.)      │
+└─────────────┘
 ```
 
 ## 📁 Project Structure
@@ -175,7 +162,6 @@ resonance-web/
 │   └── favicon.ico       # Brand icon
 ├── .env                  # Environment variables (not committed)
 ├── .env.vite            # Vite environment (example)
-├── server.js            # Express backend server
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.js
@@ -212,24 +198,21 @@ The app uses 22 tables in Supabase:
 - `coherence_logs`, `global_coherence`
 - `feed_items`, `session_logs`, `notes`
 
-See `resonance-supabase-setup.md` for complete schema documentation.
+
 
 ## 🤖 AI Integration
 
-### Option 1: Local Backend (Current)
-Uses Google Gemini API via Express server:
+The application uses Supabase Edge Functions as a secure proxy to interact with AI APIs (like Perplexity AI or Gemini). This ensures that API keys are never exposed to the client.
+
+To deploy the functions to your Supabase project:
 ```bash
-# Set your key in .env
-GEMINI_API_KEY=your-key
-npm run server
+npx supabase functions deploy consciousness-ai
+npx supabase secrets set PERPLEXITY_API_KEY=your-key
 ```
 
-### Option 2: Supabase Edge Functions (Deployed)
-Secure proxy via Supabase Edge Functions:
+To run functions locally for development:
 ```bash
-# Deploy the functions
-npx supabase functions deploy perplexity-proxy
-npx supabase secrets set PERPLEXITY_API_KEY=your-key
+npx supabase functions serve
 ```
 
 ## 🧪 Testing
@@ -247,22 +230,19 @@ npx supabase secrets set PERPLEXITY_API_KEY=your-key
 4. Delete note - should remove from database
 
 ### Test AI Features
-1. Start backend: `npm run server`
+1. Ensure edge functions are deployed or running locally
 2. Try Consciousness Mapping
 3. Enter journal text
 4. See AI analysis results
 
 ## 📝 Documentation
 
-- `README.md` - This file (frontend overview)
-- `BACKEND_README.md` - Backend API documentation
-- `resonance-supabase-setup.md` - Complete Supabase setup guide
-- `COMPONENT_STATUS.md` - Component status and testing checklist
+- `README.md` - This file (project overview and setup)
 
 ## 🛠️ Tech Stack
 
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
-- **Backend:** Node.js, Express (optional)
+- **Backend:** Supabase Edge Functions (Deno)
 - **Database:** Supabase (PostgreSQL)
 - **Authentication:** Supabase Auth
 - **AI:** Google Gemini API / Perplexity API

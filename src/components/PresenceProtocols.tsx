@@ -1,13 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { Heart, Clock, Sun, Moon, Pause } from 'lucide-react';
-import { generateIntention } from '../api/client';
-
-interface IntentionData {
-  intention: string;
-  morning: string;
-  midday: string;
-  evening: string;
-}
+import { Heart, Clock, Sun, Moon, Pause, Sparkles, WifiOff } from 'lucide-react';
+import { generateIntention, IntentionData } from '../api/client';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useOfflineStatus } from '../hooks/useOfflineStatus';
 
 const PresenceProtocols: React.FC = () => {
   const [intention, setIntention] = useState<IntentionData | null>(null);
@@ -15,19 +10,25 @@ const PresenceProtocols: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
+  const isOnline = useOfflineStatus();
 
   const generateDailyIntention = useCallback(async () => {
+    if (!isOnline) {
+      setError('You are currently offline. Intentions require a connection to the collective field.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
-      const result = await generateIntention() as IntentionData;
+      const result = await generateIntention();
       setIntention(result);
     } catch (err) {
-      setError('Could not generate intention. Please try again.');
+      setError('Could not generate intention. The field is currently turbulent. Please try again.');
       console.error('Intention error:', err);
     }
     setIsLoading(false);
-  }, []);
+  }, [isOnline]);
 
   // Session timer
   React.useEffect(() => {
@@ -56,126 +57,151 @@ const PresenceProtocols: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-8 rounded-xl shadow-lg">
-        <div className="flex items-center space-x-3 mb-6">
-          <Heart className="w-8 h-8 text-pink-600" />
-          <h2 className="text-3xl font-bold">Presence Protocols</h2>
+    <div className="space-y-8 max-w-4xl mx-auto pb-24">
+      {/* Header & Generator */}
+      <div className="bg-resonance-surface p-10 rounded-[32px] border border-resonance-border shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5 text-resonance-gold font-display text-[12rem] pointer-events-none select-none">§</div>
+        
+        <div className="flex items-center space-x-4 mb-8">
+          <div className="w-12 h-12 bg-resonance-gold/10 rounded-full flex items-center justify-center border border-resonance-gold/30">
+            <Heart className="w-6 h-6 text-resonance-gold" />
+          </div>
+          <h2 className="text-4xl font-display text-resonance-cream">Presence Protocols</h2>
         </div>
 
-        <p className="text-gray-600 mb-6 leading-relaxed">
-          Sometimes the most conscious act is closing the app. Generate a daily intention,
-          then go live it. This is where the real work happens.
+        <p className="text-resonance-muted mb-10 leading-relaxed font-body text-lg max-w-2xl">
+          True consciousness often begins when we step away. Generate a daily intention to guide your physical existence, then go live it. This is where the real work happens.
         </p>
 
         <button
           onClick={generateDailyIntention}
-          disabled={isLoading}
-          className={`relative overflow-hidden transition-all transform hover:scale-105 ${
+          disabled={isLoading || !isOnline}
+          className={`relative overflow-hidden transition-all group px-10 py-5 rounded-full font-ui font-bold tracking-widest uppercase text-xs shadow-xl ${
             isLoading
-              ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 animate-shimmer'
-              : 'bg-pink-600 hover:bg-pink-700'
-          } text-white px-8 py-3 rounded-lg shadow-lg`}
+              ? 'bg-resonance-surface border border-resonance-gold/50 cursor-wait'
+              : 'bg-resonance-gold text-resonance-bg hover:brightness-110 active:scale-[0.98] disabled:opacity-50'
+          }`}
         >
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
           )}
-          <span className={isLoading ? 'opacity-0' : 'opacity-100'}>
-            {isLoading ? 'Generating...' : 'Generate Daily Intention'}
+          <span className="flex items-center justify-center gap-3">
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-resonance-bg border-t-transparent rounded-full animate-spin" />
+                <span>Distilling Intent...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                <span>{intention ? 'Renew Intention' : 'Initialize Daily Intention'}</span>
+              </>
+            )}
           </span>
         </button>
+
+        {!isOnline && (
+          <div className="mt-6 flex items-center gap-2 text-resonance-danger text-xs font-ui uppercase tracking-wider">
+            <WifiOff size={14} />
+            <span>Connection Required</span>
+          </div>
+        )}
       </div>
 
-      {error && (
-        <div className="bg-red-50 p-6 rounded-xl border border-red-200">
-          <p className="text-red-700">{error}</p>
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-resonance-danger/10 p-6 rounded-2xl border border-resonance-danger/30 text-center"
+          >
+            <p className="text-resonance-cream font-ui text-sm uppercase tracking-widest">{error}</p>
+          </motion.div>
+        )}
 
-      {intention && (
-        <div className="space-y-6">
-          {/* Core Intention */}
-          <div className="bg-gradient-to-br from-pink-50 to-purple-50 p-8 rounded-xl border-2 border-pink-200 shadow-lg">
-            <div className="flex items-center space-x-3 mb-4">
-              <Heart className="w-6 h-6 text-pink-600" />
-              <h3 className="text-xl font-bold text-pink-900">Today's Intention</h3>
-            </div>
-            <p className="text-2xl text-gray-800 leading-relaxed font-light italic">{intention.intention}</p>
-          </div>
-
-          {/* Time-based Practices */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Morning */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-200 shadow-lg">
-              <div className="flex items-center space-x-2 mb-4">
-                <Sun className="w-6 h-6 text-amber-600" />
-                <h3 className="text-lg font-bold text-amber-900">Morning (3-5 min)</h3>
-              </div>
-              <p className="text-gray-700 leading-relaxed">{intention.morning}</p>
-            </div>
-
-            {/* Midday */}
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-200 shadow-lg">
-              <div className="flex items-center space-x-2 mb-4">
-                <Clock className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg font-bold text-blue-900">Midday Check-in</h3>
-              </div>
-              <p className="text-gray-700 leading-relaxed">{intention.midday}</p>
-            </div>
-
-            {/* Evening */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-200 shadow-lg">
-              <div className="flex items-center space-x-2 mb-4">
-                <Moon className="w-6 h-6 text-indigo-600" />
-                <h3 className="text-lg font-bold text-indigo-900">Evening Reflection</h3>
-              </div>
-              <p className="text-gray-700 leading-relaxed">{intention.evening}</p>
-            </div>
-          </div>
-
-          {/* Digital Sabbath Timer */}
-          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-8 rounded-xl border border-emerald-200 shadow-lg">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <Pause className="w-6 h-6 text-emerald-600" />
-                <h3 className="text-xl font-bold text-emerald-900">Digital Sabbath</h3>
-              </div>
-              <div className="text-3xl font-bold text-emerald-600 font-mono">
-                {formatTime(sessionTime)}
+        {intention && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-8"
+          >
+            {/* Core Intention */}
+            <div className="bg-resonance-surface/50 p-12 rounded-[40px] border border-resonance-gold/20 shadow-2xl relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,169,110,0.05)_0%,transparent_70%)]"></div>
+              <div className="flex flex-col items-center text-center relative z-10">
+                <Heart className="w-8 h-8 text-resonance-gold mb-6 opacity-50" />
+                <h3 className="text-[10px] font-ui uppercase tracking-[0.4em] text-resonance-gold mb-6">Today's Sacred Aim</h3>
+                <p className="text-3xl md:text-4xl font-display text-resonance-cream leading-tight italic max-w-2xl">
+                  "{intention.intention}"
+                </p>
               </div>
             </div>
-            
-            <p className="text-gray-700 mb-6 leading-relaxed">
-              Close this app. Put your phone away. Be with your intention in the real world.
-              We count this differently—less is more. Track your time away from screens, then return when ready.
-            </p>
 
-            {!sessionActive ? (
-              <button
-                onClick={startSession}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg transition-colors"
-              >
-                Close App & Go Live
-              </button>
-            ) : (
-              <button
-                onClick={endSession}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg transition-colors"
-              >
-                Return to Resonance ({formatTime(sessionTime)})
-              </button>
-            )}
+            {/* Time-based Practices */}
+            <div className="grid md:grid-cols-3 gap-6">
+              {[
+                { time: 'Morning', icon: Sun, content: intention.morning, color: 'text-resonance-gold' },
+                { time: 'Midday', icon: Clock, content: intention.midday, color: 'text-resonance-gold' },
+                { time: 'Evening', icon: Moon, content: intention.evening, color: 'text-resonance-gold' }
+              ].map((step, i) => (
+                <div key={i} className="bg-resonance-surface/40 p-8 rounded-3xl border border-resonance-border group hover:border-resonance-gold/30 transition-all">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <step.icon className={`w-5 h-5 ${step.color}`} />
+                    <h3 className="text-xs font-ui uppercase tracking-widest text-resonance-muted">{step.time} Practice</h3>
+                  </div>
+                  <p className="text-resonance-cream leading-relaxed font-body italic text-sm">{step.content}</p>
+                </div>
+              ))}
+            </div>
 
-            {sessionActive && (
-              <p className="text-center text-emerald-700 mt-4 text-sm italic">
-                You're present. No need to check back. Just be.
+            {/* Digital Sabbath Timer */}
+            <div className="bg-resonance-surface p-10 rounded-[40px] border border-resonance-border shadow-2xl">
+              <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-resonance-gold/10 rounded-full flex items-center justify-center">
+                    <Pause className="w-6 h-6 text-resonance-gold" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-display text-resonance-cream">Digital Sabbath</h3>
+                    <p className="text-xs font-ui uppercase tracking-widest text-resonance-muted">Live Presence Tracking</p>
+                  </div>
+                </div>
+                <div className="text-5xl font-display text-resonance-gold tracking-tighter">
+                  {formatTime(sessionTime)}
+                </div>
+              </div>
+              
+              <p className="text-resonance-muted mb-10 leading-relaxed font-body text-center max-w-xl mx-auto">
+                Close this app. Put your phone away. Embark upon your intention in the physical world. We honor this time differently—less is more. Track your presence away from screens.
               </p>
-            )}
-          </div>
-        </div>
-      )}
+
+              <button
+                onClick={sessionActive ? endSession : startSession}
+                className={`w-full py-5 rounded-2xl font-ui font-bold uppercase tracking-widest text-xs transition-all ${
+                  sessionActive 
+                    ? 'bg-transparent border border-resonance-gold text-resonance-gold hover:bg-resonance-gold/10' 
+                    : 'bg-resonance-cream text-resonance-bg hover:brightness-110 shadow-lg'
+                }`}
+              >
+                {sessionActive ? `Return to Resonance (${formatTime(sessionTime)})` : 'Close App & Go Live'}
+              </button>
+
+              <AnimatePresence>
+                {sessionActive && (
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center text-resonance-gold mt-6 text-[10px] font-ui uppercase tracking-[0.2em] animate-pulse"
+                  >
+                    You are currently present in the world.
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

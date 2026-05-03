@@ -3,11 +3,12 @@ import { Globe, Heart, Brain, Zap, BookOpen, Moon, Users, TrendingUp } from 'luc
 
 interface HomeViewProps {
   globalCoherence: number;
+  activeParticipants: number;
   coherenceContribution: number;
   onContribute: () => void;
 }
 
-const HomeView: React.FC<HomeViewProps> = ({ globalCoherence, coherenceContribution, onContribute }) => (
+const HomeView: React.FC<HomeViewProps> = ({ globalCoherence, activeParticipants, coherenceContribution, onContribute }) => (
   <div className="space-y-12">
     {/* Hero Section */}
     <div className="text-center py-16">
@@ -33,7 +34,7 @@ const HomeView: React.FC<HomeViewProps> = ({ globalCoherence, coherenceContribut
         </div>
         <h3 className="text-[11px] font-ui uppercase tracking-[0.2em] text-resonance-muted mb-4 text-center">Global Coherence</h3>
         <p className="text-5xl font-display text-resonance-gold mb-2 text-center">{globalCoherence.toLocaleString()}</p>
-        <p className="text-sm font-ui text-resonance-muted text-center">People in coherence right now</p>
+        <p className="text-sm font-ui text-resonance-muted text-center">{activeParticipants.toLocaleString()} people in coherence right now</p>
       </div>
 
       {/* Your Contribution Card */}

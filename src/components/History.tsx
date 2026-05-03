@@ -202,8 +202,36 @@ const UserJourneyHistory: React.FC = () => {
                       </div>
                     )}
 
+                    {selectedReflection.feature === 'synchronicity' && (
+                      <div className="space-y-4">
+                        <p className="text-resonance-cream text-lg font-display italic">"{selectedReflection.result_json.connection}"</p>
+                        <div>
+                          <p className="text-[10px] font-ui uppercase tracking-widest text-resonance-gold mb-1">Question</p>
+                          <p className="text-xs">{selectedReflection.result_json.question}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-ui uppercase tracking-widest text-resonance-gold mb-1">Practice</p>
+                          <p className="text-xs italic">{selectedReflection.result_json.practice}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedReflection.feature === 'shadow' && (
+                      <div className="space-y-4">
+                        <p className="text-resonance-cream text-lg font-display italic">"{selectedReflection.result_json.reflection}"</p>
+                        <div>
+                          <p className="text-[10px] font-ui uppercase tracking-widest text-resonance-gold mb-1">Origin</p>
+                          <p className="text-xs">{selectedReflection.result_json.origin}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-ui uppercase tracking-widest text-resonance-gold mb-1">Reframe</p>
+                          <p className="text-xs italic">{selectedReflection.result_json.reframe}</p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Generic fallback for raw JSON or other features */}
-                    {!['consciousness_map', 'wisdom'].includes(selectedReflection.feature) && (
+                    {!['consciousness_map', 'wisdom', 'synchronicity', 'shadow'].includes(selectedReflection.feature) && (
                        <pre className="text-[10px] opacity-50 overflow-x-auto p-4 bg-resonance-bg rounded-lg">
                          {JSON.stringify(selectedReflection.result_json, null, 2)}
                        </pre>

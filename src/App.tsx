@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { checkBackendHealth } from './api/client';
+import { checkBackendHealth, incrementGlobalCoherence } from './api/client';
 import { useAuth } from './lib/AuthContext';
 import { supabase } from './lib/supabase';
 import Navigation from './components/Navigation';
 import LoadingFallback from './components/LoadingFallback';
+import { useOfflineStatus } from './hooks/useOfflineStatus';
+import { WifiOff } from 'lucide-react';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy loaded views
 const HomeView = lazy(() => import('./components/Dashboard'));
@@ -19,23 +22,16 @@ const RadicalTransparency = lazy(() => import('./components/RadicalTransparency'
 const CommunityHub = lazy(() => import('./components/CommunityHub'));
 const UserJourneyHistory = lazy(() => import('./components/History'));
 
+import { Analysis, ShadowData } from './api/client';
+
 // Types
 interface UserData {
-  journalEntries: Array<{ text: string; date: Date; analysis: any }>;
+  journalEntries: Array<{ text: string; date: Date; analysis: Analysis }>;
   frequency: string | null;
   connections: string[];
   practices: string[];
-  shadowWork: any[];
+  shadowWork: ShadowData[];
   coherenceContribution: number;
-}
-
-interface Analysis {
-  frequency: string;
-  growthEdges: string[];
-  flowTriggers: string[];
-  patterns: string;
-  nextStep: string;
-  error?: string;
 }
 
 // Main App Component
@@ -51,6 +47,8 @@ const ResonanceApp: React.FC = () => {
   });
   const [globalCoherence, setGlobalCoherence] = useState(73542);
 
+  const [onlineUsersCount, setOnlineUsersCount] = useState(0);
+
   // Check backend health on mount
   useEffect(() => {
     checkBackendHealth()
@@ -62,46 +60,51 @@ const ResonanceApp: React.FC = () => {
       });
   }, []);
 
-  // Heartbeat to track active presence
-  useEffect(() => {
-    if (!user) return;
-
-    const sendHeartbeat = async () => {
-      try {
-        await supabase.from('user_heartbeats').upsert({
-          user_id: user.id,
-          last_seen: new Date().toISOString()
-        });
-      } catch (err) {
-        console.error('Heartbeat error:', err);
-      }
-    };
-
-    sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 60000); // Every minute
-    return () => clearInterval(interval);
-  }, [user]);
-
-  // Subscribe to real-time global coherence updates
+  // Subscribe to real-time global coherence and presence updates
   useEffect(() => {
     const fetchInitialMetrics = async () => {
       const { data } = await supabase.from('global_metrics').select('*').eq('id', 'current').single();
-      if (data) setGlobalCoherence(data.coherence_score);
+      if (data) {
+        setGlobalCoherence(data.coherence_score);
+      }
     };
 
     fetchInitialMetrics();
 
-    const channel = supabase
-      .channel('global_metrics_changes')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'global_metrics', filter: "id=eq.current" }, (payload) => {
+    const channel = supabase.channel('global_metrics_changes', {
+      config: {
+        presence: {
+          key: user?.id || 'anonymous',
+        },
+      },
+    });
+
+    channel
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'global_metrics', 
+        filter: "id=eq.current" 
+      }, (payload) => {
         setGlobalCoherence(payload.new.coherence_score);
       })
-      .subscribe();
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        setOnlineUsersCount(Object.keys(state).length);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED' && user) {
+          await channel.track({
+            online_at: new Date().toISOString(),
+            email: user.email
+          });
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   const handleAnalysisComplete = useCallback((analysis: Analysis, text: string) => {
     setUserData(prev => ({
@@ -111,35 +114,54 @@ const ResonanceApp: React.FC = () => {
     }));
   }, []);
 
+  const isOnline = useOfflineStatus();
+
   return (
     <div className="min-h-screen bg-resonance-bg text-resonance-cream selection:bg-resonance-gold selection:text-resonance-bg">
       <Navigation onSignOut={signOut} userEmail={user?.email} />
       
+      {!isOnline && (
+        <div className="fixed top-20 left-0 right-0 z-50 bg-resonance-danger/90 text-resonance-cream py-2 px-4 flex items-center justify-center gap-3 backdrop-blur-md animate-in slide-in-from-top duration-500">
+          <WifiOff size={16} className="animate-pulse" />
+          <span className="text-xs font-ui uppercase tracking-widest font-bold">You are currently offline. Some features may be limited.</span>
+        </div>
+      )}
+      
       <main className="max-w-7xl mx-auto p-6 pt-24 pb-12">
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
-            <Route index element={<Navigate to="/home" replace />} />
-            <Route path="/home" element={
-              <HomeView 
-                globalCoherence={globalCoherence} 
-                coherenceContribution={userData.coherenceContribution} 
-                onContribute={() => setUserData(prev => ({ ...prev, coherenceContribution: prev.coherenceContribution + 1 }))} 
-              />
-            } />
-            <Route path="/mapping" element={<ConsciousnessMapping onAnalysisComplete={handleAnalysisComplete} />} />
-            <Route path="/synchronicity" element={<SynchronicityEngine />} />
-            <Route path="/wisdom" element={<AncientWisdom />} />
-            <Route path="/coherence" element={<CollectiveCoherence />} />
-            <Route path="/shadow" element={<ShadowIntegration />} />
-            <Route path="/feed" element={<CollectiveCoherence />} /> 
-            <Route path="/history" element={<UserJourneyHistory />} />
-            <Route path="/community" element={<CommunityHub />} />
-            <Route path="/transparency" element={<RadicalTransparency />} />
-            <Route path="/notes" element={<Notes />} />
-            <Route path="/presence" element={<PresenceProtocols />} />
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route index element={<Navigate to="/home" replace />} />
+              <Route path="/home" element={
+                <HomeView 
+                  globalCoherence={globalCoherence} 
+                  activeParticipants={onlineUsersCount}
+                  coherenceContribution={userData.coherenceContribution} 
+                  onContribute={async () => {
+                    setUserData(prev => ({ ...prev, coherenceContribution: prev.coherenceContribution + 1 }));
+                    try {
+                      await incrementGlobalCoherence(1);
+                    } catch (err) {
+                      console.error('Failed to sync coherence contribution', err);
+                    }
+                  }}
+                />
+              } />
+              <Route path="/mapping" element={<ConsciousnessMapping onAnalysisComplete={handleAnalysisComplete} />} />
+              <Route path="/synchronicity" element={<SynchronicityEngine />} />
+              <Route path="/wisdom" element={<AncientWisdom />} />
+              <Route path="/coherence" element={<CollectiveCoherence />} />
+              <Route path="/shadow" element={<ShadowIntegration />} />
+              <Route path="/feed" element={<CommunityHub />} />
+              <Route path="/history" element={<UserJourneyHistory />} />
+              <Route path="/community" element={<CommunityHub />} />
+              <Route path="/transparency" element={<RadicalTransparency />} />
+              <Route path="/notes" element={<Notes />} />
+              <Route path="/presence" element={<PresenceProtocols />} />
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       <footer className="bg-resonance-surface border-t border-resonance-border p-8 mt-12">

@@ -1,7 +1,10 @@
 // API Client for Resonance Backend (Supabase Edge Functions)
 import { supabase } from '../lib/supabase';
+import { z } from 'zod';
 
-const EDGE_FUNCTION_URL = import.meta.env.VITE_EDGE_FUNCTION_URL || 'http://localhost:54321/functions/v1/consciousness-ai';
+const isProd = import.meta.env.PROD;
+const fallbackUrl = isProd ? '' : 'http://localhost:54321/functions/v1/consciousness-ai';
+const EDGE_FUNCTION_URL = import.meta.env.VITE_EDGE_FUNCTION_URL || fallbackUrl;
 
 export interface APIResponse<T> {
   success: boolean;
@@ -14,11 +17,69 @@ export interface APIError {
   details?: string;
 }
 
+export const AnalysisSchema = z.object({
+  frequency: z.string(),
+  growthEdges: z.array(z.string()),
+  flowTriggers: z.array(z.string()),
+  patterns: z.string(),
+  nextStep: z.string(),
+  error: z.string().optional(),
+}).catchall(z.unknown());
+export type Analysis = z.infer<typeof AnalysisSchema>;
+
+export const ResourceSchema = z.object({
+  title: z.string(),
+  insight: z.string(),
+});
+
+export const SynchronicityDataSchema = z.object({
+  resources: z.array(ResourceSchema),
+  practice: z.string(),
+  question: z.string(),
+  connection: z.string(),
+}).catchall(z.unknown());
+export type SynchronicityData = z.infer<typeof SynchronicityDataSchema>;
+
+export const WisdomDataSchema = z.object({
+  teaching: z.string(),
+  practice: z.string(),
+  reframe: z.string(),
+  tradition: z.string(),
+}).catchall(z.unknown());
+export type WisdomData = z.infer<typeof WisdomDataSchema>;
+
+export const ShadowDataSchema = z.object({
+  reflection: z.string(),
+  origin: z.string(),
+  explorationQuestion: z.string(),
+  reframe: z.string(),
+  seekSupport: z.string(),
+}).catchall(z.unknown());
+export type ShadowData = z.infer<typeof ShadowDataSchema>;
+
+export const FeedItemSchema = z.object({
+  category: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  insight: z.string(),
+  action: z.string(),
+}).catchall(z.unknown());
+export type FeedItem = z.infer<typeof FeedItemSchema>;
+
+export const IntentionDataSchema = z.object({
+  intention: z.string(),
+  morning: z.string(),
+  midday: z.string(),
+  evening: z.string(),
+}).catchall(z.unknown());
+export type IntentionData = z.infer<typeof IntentionDataSchema>;
+
 // Generic Edge Function call with auth token and optional persistence
 async function callEdgeFunction<T>(
   endpoint: string, 
   body: Record<string, unknown>, 
-  persistence?: { feature: string; input: string }
+  persistence?: { feature: string; input: string },
+  schema?: z.ZodType<T>
 ): Promise<T> {
   try {
     // Get current session
@@ -48,7 +109,16 @@ async function callEdgeFunction<T>(
       throw new Error(data.error || 'Request failed');
     }
 
-    const result = data.data as T;
+    let result = data.data as T;
+
+    if (schema) {
+      const parsedResult = schema.safeParse(result);
+      if (!parsedResult.success) {
+        console.error("Schema validation failed for endpoint", endpoint, parsedResult.error);
+        throw new Error("Received invalid data from AI.");
+      }
+      result = parsedResult.data;
+    }
 
     // Optional persistence
     if (persistence) {
@@ -84,36 +154,40 @@ export async function checkBackendHealth(): Promise<{
 }
 
 // Consciousness Mapping
-export async function mapConsciousness(journalText: string) {
-  return callEdgeFunction('/consciousness/map', { journalText }, { feature: 'consciousness_map', input: journalText });
+export async function mapConsciousness(journalText: string): Promise<Analysis> {
+  return callEdgeFunction('/consciousness/map', { journalText }, { feature: 'consciousness_map', input: journalText }, AnalysisSchema);
 }
 
 // Synchronicity Engine
-export async function findSynchronicities(interest: string) {
-  return callEdgeFunction('/synchronicity', { interest }, { feature: 'synchronicity', input: interest });
+export async function findSynchronicities(interest: string): Promise<SynchronicityData> {
+  return callEdgeFunction('/synchronicity', { interest }, { feature: 'synchronicity', input: interest }, SynchronicityDataSchema);
 }
 
 // Ancient Wisdom
-export async function getWisdom(situation: string) {
-  return callEdgeFunction('/wisdom', { situation }, { feature: 'wisdom', input: situation });
+export async function getWisdom(situation: string): Promise<WisdomData> {
+  return callEdgeFunction('/wisdom', { situation }, { feature: 'wisdom', input: situation }, WisdomDataSchema);
 }
 
 // Shadow Integration
-export async function exploreShadow(shadowPrompt: string) {
-  return callEdgeFunction('/shadow', { shadowPrompt }, { feature: 'shadow', input: shadowPrompt });
+export async function exploreShadow(shadowPrompt: string): Promise<ShadowData> {
+  return callEdgeFunction('/shadow', { shadowPrompt }, { feature: 'shadow', input: shadowPrompt }, ShadowDataSchema);
 }
 
 // Consciousness Feed
-export async function loadFeed() {
-  return callEdgeFunction('/feed', {});
+export async function loadFeed(): Promise<FeedItem[]> {
+  return callEdgeFunction('/feed', {}, undefined, z.array(FeedItemSchema));
 }
 
 // Daily Intentions
-export async function generateIntention() {
-  return callEdgeFunction('/intention', {});
+export async function generateIntention(): Promise<IntentionData> {
+  return callEdgeFunction('/intention', {}, { feature: 'daily_intention', input: 'daily' }, IntentionDataSchema);
 }
 
-// Generic generate endpoint (for custom prompts)
-export async function generateContent(prompt: string, systemContext?: string, feature?: string) {
-  return callEdgeFunction('/generate', { prompt, systemContext, feature });
+// Increment global coherence safely
+export async function incrementGlobalCoherence(amount: number = 1): Promise<void> {
+  const { error } = await supabase.rpc('increment_coherence_score', { amount });
+  if (error) {
+    console.error('Failed to increment global coherence:', error);
+    throw error;
+  }
 }
