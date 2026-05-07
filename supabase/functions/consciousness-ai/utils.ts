@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
-export const MODEL_NAME = "sonar";
+export const MODEL_NAME = "sonar-pro";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
