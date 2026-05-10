@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+
 
 const Hero: React.FC = () => (
   <section className="relative min-h-screen flex flex-col items-center justify-center text-center bg-resonance-bg overflow-hidden">
