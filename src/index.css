@@ -71,9 +71,20 @@ body {
   font-family: 'Lora', serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0D0C0A;
+  background-color: #0f0f0f;
   color: #EDE8DF;
+  position: relative;
 }
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(201,169,110,0.15), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Cormorant Garamond', serif;

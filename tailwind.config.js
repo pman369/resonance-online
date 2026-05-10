@@ -6,9 +6,10 @@ export default {
   ],
   theme: {
     extend: {
+
       colors: {
         resonance: {
-          bg: '#0D0C0A',
+          bg: '#0f0f0f',
           surface: '#161410',
           gold: '#C9A96E',
           cream: '#EDE8DF',
