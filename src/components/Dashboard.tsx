@@ -1,5 +1,6 @@
 import React from 'react';
 import { Globe, Heart, Brain, Zap, BookOpen, Moon, Users, TrendingUp } from 'lucide-react';
+import Hero from './Hero';
 
 interface HomeViewProps {
   globalCoherence: number;
@@ -10,20 +11,7 @@ interface HomeViewProps {
 
 const HomeView: React.FC<HomeViewProps> = ({ globalCoherence, activeParticipants, coherenceContribution, onContribute }) => (
   <div className="space-y-12">
-    {/* Hero Section */}
-    <div className="text-center py-16">
-      <div className="w-24 h-24 bg-resonance-surface border border-resonance-gold/20 rounded-full mx-auto mb-8 flex items-center justify-center relative">
-        <div className="absolute inset-0 bg-resonance-gold/10 rounded-full animate-ping" />
-        <span className="text-6xl text-resonance-gold relative z-10 font-display">✧</span>
-      </div>
-      <h2 className="text-5xl md:text-7xl font-display mb-6 text-resonance-cream leading-tight">
-        You Are Not Broken. <br /> You Are Becoming.
-      </h2>
-      <p className="text-xl font-body italic text-resonance-muted max-w-2xl mx-auto leading-relaxed">
-        In a world accelerating toward artificial intelligence, we stand at a threshold.
-        Will technology diminish us, or can it amplify what makes us most human?
-      </p>
-    </div>
+    <Hero />
 
     {/* Stats Cards */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
