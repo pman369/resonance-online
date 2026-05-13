@@ -42,4 +42,8 @@ dist-ssr
 .vercel
 .env*.local
 docs/*
+resonance/*
+resonance-mobile.md
 FINALCHECKLIST.md
+production-ready-cross-platform-mobile-app.md
+mobile-asset-generation-validation-spec.md
