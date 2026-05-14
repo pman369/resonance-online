@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Sparkles, LogOut, Brain, Zap, BookOpen, Globe, Moon, Heart, Newspaper, MessageCircle, Eye, Clock } from 'lucide-react';
+import { Sparkles, LogOut, Brain, Zap, BookOpen, Globe, Moon, Heart, Newspaper, MessageCircle, Eye, Clock, User, Settings } from 'lucide-react';
 import brandIcon from '../assets/brand-icon.png';
+import { useProfile } from '../hooks/useProfile';
 
 interface NavigationProps {
   onSignOut: () => void;
@@ -10,9 +11,22 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ onSignOut, userEmail }) => {
   const navigate = useNavigate();
+  const { profile } = useProfile();
   const [tooltip, setTooltip] = useState<{ text: string; visible: boolean }>({ text: '', visible: false });
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.user-menu-container')) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [menuOpen]);
 
   const navItems = [
     { id: 'home', icon: Sparkles, label: 'Home', path: '/home', tooltip: 'Return to center' },
@@ -25,7 +39,8 @@ const Navigation: React.FC<NavigationProps> = ({ onSignOut, userEmail }) => {
     { id: 'shadow', icon: Moon, label: 'Shadow', path: '/shadow', tooltip: 'Shadow integration' },
     { id: 'community', icon: MessageCircle, label: 'Community', path: '/community', tooltip: 'Community hub' },
     { id: 'transparency', icon: Eye, label: 'Transparency', path: '/transparency', tooltip: 'How we work' },
-    { id: 'presence', icon: Heart, label: 'Presence', path: '/presence', tooltip: 'Go live' }
+    { id: 'presence', icon: Heart, label: 'Presence', path: '/presence', tooltip: 'Go live' },
+    { id: 'profile', icon: User, label: 'Profile', path: '/profile', tooltip: 'Your presence' }
   ];
 
   const handleMouseEnter = (e: React.MouseEvent, text: string) => {
@@ -70,20 +85,54 @@ const Navigation: React.FC<NavigationProps> = ({ onSignOut, userEmail }) => {
             </NavLink>
           ))}
 
-          {/* User Email & Sign Out */}
-          <div className="flex items-center gap-3 ml-3 pl-3 border-l border-resonance-border">
-            {userEmail && (
-              <span className="text-[10px] font-ui uppercase tracking-widest text-resonance-muted hidden lg:block max-w-32 truncate">
-                {userEmail.split('@')[0]}
-              </span>
-            )}
+          {/* User Menu */}
+          <div className="relative ml-3 pl-3 border-l border-resonance-border user-menu-container">
             <button
-              onClick={onSignOut}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-resonance-muted hover:text-resonance-danger hover:bg-resonance-danger/10 transition-all duration-300"
-              aria-label="Sign Out"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-2 text-resonance-muted hover:text-resonance-cream transition-colors"
+              aria-label="User menu"
+              aria-expanded={menuOpen}
+              aria-haspopup="true"
             >
-              <LogOut className="w-4.5 h-4.5" />
+              {/* Avatar or initials fallback */}
+              <div className="w-8 h-8 rounded-full bg-resonance-gold/20 border border-resonance-gold/40 flex items-center justify-center text-resonance-gold font-ui text-xs font-bold overflow-hidden">
+                {profile?.avatar_url
+                  ? <img src={profile.avatar_url} alt="Your avatar" className="w-full h-full object-cover" />
+                  : (profile?.display_name?.[0] || userEmail?.[0]?.toUpperCase() || '✧')
+                }
+              </div>
+              <span className="hidden lg:block text-[10px] font-ui uppercase tracking-widest text-resonance-muted max-w-32 truncate">
+                {profile?.display_name || userEmail?.split('@')[0]}
+              </span>
             </button>
+
+            {menuOpen && (
+              <div
+                className="absolute right-0 top-12 w-48 bg-resonance-surface border border-resonance-border rounded-xl shadow-2xl z-50 overflow-hidden"
+                role="menu"
+              >
+                <NavLink to="/profile" role="menuitem"
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-ui text-resonance-cream hover:bg-resonance-border transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <User size={14} /> Your Profile
+                </NavLink>
+                <NavLink to="/settings" role="menuitem"
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-ui text-resonance-cream hover:bg-resonance-border transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <Settings size={14} /> Settings
+                </NavLink>
+                <div className="border-t border-resonance-border" />
+                <button
+                  onClick={() => { setMenuOpen(false); onSignOut(); }}
+                  role="menuitem"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-ui text-resonance-muted hover:text-resonance-danger hover:bg-resonance-danger/10 transition-colors"
+                >
+                  <LogOut size={14} /> Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

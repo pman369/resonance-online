@@ -21,6 +21,8 @@ const PresenceProtocols = lazy(() => import('./components/PresenceProtocols'));
 const RadicalTransparency = lazy(() => import('./components/RadicalTransparency'));
 const CommunityHub = lazy(() => import('./components/CommunityHub'));
 const UserJourneyHistory = lazy(() => import('./components/History'));
+const ProfilePage = lazy(() => import('./components/profile/ProfilePage'));
+const SettingsPage = lazy(() => import('./components/settings/SettingsPage'));
 
 import { Analysis, ShadowData } from './api/client';
 
@@ -158,6 +160,9 @@ const ResonanceApp: React.FC = () => {
               <Route path="/transparency" element={<RadicalTransparency />} />
               <Route path="/notes" element={<Notes />} />
               <Route path="/presence" element={<PresenceProtocols />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/:tab" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           </Suspense>
