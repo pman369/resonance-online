@@ -10,6 +10,8 @@ interface Story {
   id: string;
   user_id: string;
   username?: string;
+  display_name?: string;
+  avatar_url?: string;
   content: string;
   impact: string;
   likes_count: number;
@@ -96,14 +98,26 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onUpdate }) => {
     }
   };
 
+  const displayName = story.display_name || story.username || 'Anonymous Traveler';
+  const initials = displayName.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || '✧';
+
   return (
     <div className="bg-resonance-surface rounded-2xl p-6 border border-resonance-border shadow-lg hover:border-resonance-gold/30 transition-all group">
       <div className="flex justify-between items-start mb-4">
-        <div>
-          <p className="font-display text-lg text-resonance-cream">{story.username}</p>
-          <p className="text-[10px] font-ui uppercase tracking-widest text-resonance-muted">
-            {new Date(story.created_at).toLocaleDateString()}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-resonance-bg border border-resonance-gold/20 flex items-center justify-center text-resonance-gold font-display text-xs overflow-hidden">
+            {story.avatar_url ? (
+              <img src={story.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+            ) : (
+              <span>{initials}</span>
+            )}
+          </div>
+          <div>
+            <p className="font-display text-lg text-resonance-cream leading-tight">{displayName}</p>
+            <p className="text-[10px] font-ui uppercase tracking-widest text-resonance-muted">
+              {new Date(story.created_at).toLocaleDateString()}
+            </p>
+          </div>
         </div>
         <Shield size={16} className="text-resonance-muted/30" />
       </div>
@@ -236,7 +250,11 @@ const CommunityHub: React.FC = () => {
         .from('stories')
         .select(`
           *,
-          profiles:user_id (username)
+          profiles (
+            username,
+            display_name,
+            avatar_url
+          )
         `)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -255,11 +273,16 @@ const CommunityHub: React.FC = () => {
         userReactions = reactData || [];
       }
       
-      const formatted = (simpleData || []).map(s => ({
-        ...s,
-        username: (s as any).profiles?.username || 'Anonymous Traveler',
-        user_reaction: userReactions.find(r => r.content_id === s.id)?.reaction || null
-      }));
+      const formatted = (simpleData || []).map(s => {
+        const profile = (s as any).profiles;
+        return {
+          ...s,
+          username: profile?.username || null,
+          display_name: profile?.display_name || null,
+          avatar_url: profile?.avatar_url || null,
+          user_reaction: userReactions.find(r => r.content_id === s.id)?.reaction || null
+        };
+      });
       
       setStories(formatted);
     } catch (err) {
