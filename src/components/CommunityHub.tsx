@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Users, MessageSquare, Heart, Plus, Shield } from 'lucide-react';
+import { MessageCircle, MessageSquare, Heart, Plus, Shield, Send, CornerDownRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { ReactionType, addReaction, removeReaction, postComment, fetchComments, Comment } from '../api/communityClient';
+import { CircleList } from './community/circles/CircleList';
+import { DiscussionSection } from './community/discussions/DiscussionSection';
 
 interface Story {
   id: string;
@@ -11,8 +14,194 @@ interface Story {
   impact: string;
   likes_count: number;
   created_at: string;
-  liked?: boolean;
+  reactions?: { [key in ReactionType]?: number };
+  user_reaction?: ReactionType | null;
 }
+
+interface StoryCardProps {
+  story: Story;
+  onUpdate: () => void;
+}
+
+const StoryCard: React.FC<StoryCardProps> = ({ story, onUpdate }) => {
+  const { user } = useAuth();
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isReactionMenuOpen, setIsReactionMenuOpen] = useState(false);
+
+  const reactions: { type: ReactionType, icon: string, label: string }[] = [
+    { type: 'resonate', icon: '✨', label: 'Resonate' },
+    { type: 'expand', icon: '🌌', label: 'Expand' },
+    { type: 'ground', icon: '🌱', label: 'Ground' },
+    { type: 'deepen', icon: '⚓', label: 'Deepen' }
+  ];
+
+  useEffect(() => {
+    if (showComments) {
+      loadComments();
+      const channel = supabase
+        .channel(`comments_${story.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'content_comments', 
+          filter: `content_id=eq.${story.id}` 
+        }, () => {
+          loadComments();
+        })
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [showComments, story.id]);
+
+  async function loadComments() {
+    try {
+      const data = await fetchComments(story.id);
+      setComments(data as any);
+    } catch (err) {
+      console.error('Error loading comments:', err);
+    }
+  }
+
+  const handleReaction = async (type: ReactionType) => {
+    if (!user) return;
+    try {
+      if (story.user_reaction === type) {
+        await removeReaction(story.id, type);
+      } else {
+        await addReaction(story.id, 'story', type);
+      }
+      onUpdate();
+      setIsReactionMenuOpen(false);
+    } catch (err) {
+      console.error('Error reacting:', err);
+    }
+  };
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user || isSubmittingComment) return;
+
+    setIsSubmittingComment(true);
+    try {
+      await postComment(story.id, 'story', newComment.trim());
+      setNewComment('');
+      // Real-time will handle the list update
+    } catch (err) {
+      console.error('Error posting comment:', err);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  return (
+    <div className="bg-resonance-surface rounded-2xl p-6 border border-resonance-border shadow-lg hover:border-resonance-gold/30 transition-all group">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <p className="font-display text-lg text-resonance-cream">{story.username}</p>
+          <p className="text-[10px] font-ui uppercase tracking-widest text-resonance-muted">
+            {new Date(story.created_at).toLocaleDateString()}
+          </p>
+        </div>
+        <Shield size={16} className="text-resonance-muted/30" />
+      </div>
+
+      <p className="text-resonance-muted font-body leading-relaxed mb-6 italic">"{story.content}"</p>
+
+      <div className="bg-resonance-bg/50 rounded-xl p-4 border border-resonance-border mb-6">
+        <p className="text-xs font-ui text-resonance-gold uppercase tracking-widest mb-1">Impact</p>
+        <p className="text-sm font-ui text-resonance-cream">{story.impact}</p>
+      </div>
+
+      <div className="flex justify-between items-center pt-4 border-t border-resonance-border">
+        <div className="relative">
+          <button 
+            onMouseEnter={() => setIsReactionMenuOpen(true)}
+            onClick={() => setIsReactionMenuOpen(!isReactionMenuOpen)}
+            className={`flex items-center gap-2 transition-colors ${
+              story.user_reaction ? 'text-resonance-gold' : 'text-resonance-muted hover:text-resonance-gold'
+            }`}
+          >
+            <Heart size={16} fill={story.user_reaction ? "currentColor" : "none"} />
+            <span className="text-xs font-ui">Resonate</span>
+          </button>
+
+          {isReactionMenuOpen && (
+            <div 
+              onMouseLeave={() => setIsReactionMenuOpen(false)}
+              className="absolute bottom-full left-0 mb-2 p-2 bg-resonance-surface border border-resonance-border rounded-full shadow-2xl flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 z-50"
+            >
+              {reactions.map(r => (
+                <button
+                  key={r.type}
+                  onClick={() => handleReaction(r.type)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-xl hover:bg-resonance-bg transition-all hover:scale-125 ${
+                    story.user_reaction === r.type ? 'bg-resonance-gold/20' : ''
+                  }`}
+                  title={r.label}
+                >
+                  {r.icon}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button 
+          onClick={() => setShowComments(!showComments)}
+          className={`flex items-center gap-2 transition-colors ${
+            showComments ? 'text-resonance-gold' : 'text-resonance-muted hover:text-resonance-gold'
+          }`}
+        >
+          <MessageSquare size={16} />
+          <span className="text-xs font-ui">{showComments ? 'Hide Comments' : 'Comments'}</span>
+        </button>
+      </div>
+
+      {showComments && (
+        <div className="mt-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+          <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+            {comments.length === 0 ? (
+              <p className="text-[10px] text-center text-resonance-muted uppercase tracking-widest py-4">Silence awaits your voice</p>
+            ) : (
+              comments.map(comment => (
+                <div key={comment.id} className="flex gap-3 items-start">
+                  <div className="mt-1"><CornerDownRight size={12} className="text-resonance-gold/40" /></div>
+                  <div className="flex-1 bg-resonance-bg/30 p-3 rounded-xl border border-resonance-border/50">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] font-bold text-resonance-gold uppercase tracking-wider">{comment.username}</span>
+                      <span className="text-[8px] text-resonance-muted uppercase">{new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p className="text-xs text-resonance-cream font-ui">{comment.text}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <form onSubmit={handlePostComment} className="flex gap-2">
+            <input 
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add to the resonance..."
+              className="flex-1 bg-resonance-bg border border-resonance-border rounded-full px-4 py-2 text-xs text-resonance-cream focus:outline-none focus:border-resonance-gold/50 transition-colors"
+            />
+            <button 
+              type="submit"
+              disabled={!newComment.trim() || isSubmittingComment}
+              className="w-8 h-8 bg-resonance-gold text-resonance-bg rounded-full flex items-center justify-center hover:brightness-110 active:scale-90 transition-all disabled:opacity-50"
+            >
+              <Send size={14} />
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CommunityHub: React.FC = () => {
   const { user } = useAuth();
@@ -26,24 +215,24 @@ const CommunityHub: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'stories') {
       fetchStories();
-      
       const channel = supabase
-        .channel('public_stories')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stories' }, (payload) => {
-          setStories(prev => [payload.new as Story, ...prev]);
+        .channel('community_stories_sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => {
+          fetchStories();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'content_interactions' }, () => {
+          fetchStories();
         })
         .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      return () => { supabase.removeChannel(channel); };
     }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   async function fetchStories() {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: simpleData, error: simpleError } = await supabase
         .from('stories')
         .select(`
           *,
@@ -52,11 +241,24 @@ const CommunityHub: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (error) throw error;
+      if (simpleError) throw simpleError;
+
+      // Fetch user's reactions for these stories
+      const storyIds = (simpleData || []).map(s => s.id);
+      let userReactions: any[] = [];
+      if (user && storyIds.length > 0) {
+        const { data: reactData } = await supabase
+          .from('content_interactions')
+          .select('content_id, reaction')
+          .in('content_id', storyIds)
+          .eq('user_id', user.id);
+        userReactions = reactData || [];
+      }
       
-      const formatted = (data || []).map(s => ({
+      const formatted = (simpleData || []).map(s => ({
         ...s,
-        username: (s as any).profiles?.username || 'Anonymous Traveler'
+        username: (s as any).profiles?.username || 'Anonymous Traveler',
+        user_reaction: userReactions.find(r => r.content_id === s.id)?.reaction || null
       }));
       
       setStories(formatted);
@@ -81,33 +283,12 @@ const CommunityHub: React.FC = () => {
         }]);
 
       if (error) throw error;
-      
       setNewStory('');
       setImpact('');
-      // Real-time subscription will handle the UI update
     } catch (err) {
       console.error('Error sharing story:', err);
     } finally {
       setIsPosting(false);
-    }
-  };
-
-  const handleLike = async (storyId: string, currentLikes: number) => {
-    if (!user) return;
-    try {
-      // Optimistic update
-      setStories(stories.map(s => s.id === storyId ? { ...s, likes_count: s.likes_count + 1 } : s));
-      
-      const { error } = await supabase
-        .from('stories')
-        .update({ likes_count: currentLikes + 1 })
-        .eq('id', storyId);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error liking story:', err);
-      // Revert on error
-      fetchStories();
     }
   };
 
@@ -138,107 +319,61 @@ const CommunityHub: React.FC = () => {
         </div>
       </div>
 
-      {/* Stories Tab */}
-      {activeTab === 'stories' && (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {/* Share Story CTA */}
-          <div className="bg-resonance-surface rounded-2xl p-8 border border-resonance-border relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Plus size={80} className="text-resonance-gold" />
-            </div>
-            
-            <h3 className="text-xl font-display text-resonance-cream mb-4">Share Your Journey</h3>
-            <p className="text-resonance-muted font-body mb-6 max-w-2xl">
-              How has your frequency shifted? Be real, not perfect. Your vulnerability creates permission for others to do the same.
-            </p>
-            
-            <div className="space-y-4 relative z-10">
-              <textarea
-                value={newStory}
-                onChange={(e) => setNewStory(e.target.value)}
-                placeholder="What moment of resonance did you experience today?"
-                className="w-full bg-resonance-bg border border-resonance-border rounded-xl p-4 text-resonance-cream font-ui focus:border-resonance-gold focus:outline-none transition-colors min-h-[120px]"
-              />
-              <input 
-                type="text"
-                value={impact}
-                onChange={(e) => setImpact(e.target.value)}
-                placeholder="Briefly, what was the impact?"
-                className="w-full bg-resonance-bg border border-resonance-border rounded-xl p-4 text-resonance-cream font-ui focus:border-resonance-gold focus:outline-none transition-colors"
-              />
-              <button
-                onClick={handleShareStory}
-                disabled={isPosting || !newStory.trim()}
-                className="bg-resonance-gold hover:brightness-110 text-resonance-bg px-8 py-3 rounded-full font-ui font-bold transition-all disabled:opacity-50 flex items-center gap-2"
-              >
-                {isPosting ? 'Sending...' : 'Share My Story'}
-              </button>
-            </div>
-          </div>
-
-          {/* Story Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {isLoading && stories.length === 0 ? (
-              [1, 2, 3, 4].map(i => (
-                <div key={i} className="h-64 bg-resonance-surface border border-resonance-border rounded-2xl animate-pulse" />
-              ))
-            ) : stories.map(story => (
-              <div key={story.id} className="bg-resonance-surface rounded-2xl p-6 border border-resonance-border shadow-lg hover:border-resonance-gold/30 transition-all group">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <p className="font-display text-lg text-resonance-cream">{story.username}</p>
-                    <p className="text-[10px] font-ui uppercase tracking-widest text-resonance-muted">
-                      {new Date(story.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Shield size={16} className="text-resonance-muted/30" />
-                </div>
-
-                <p className="text-resonance-muted font-body leading-relaxed mb-6 italic">"{story.content}"</p>
-
-                <div className="bg-resonance-bg/50 rounded-xl p-4 border border-resonance-border mb-6">
-                  <p className="text-xs font-ui text-resonance-gold uppercase tracking-widest mb-1">Impact</p>
-                  <p className="text-sm font-ui text-resonance-cream">{story.impact}</p>
-                </div>
-
-                <div className="flex justify-between items-center pt-4 border-t border-resonance-border">
-                  <button 
-                    onClick={() => handleLike(story.id, story.likes_count)}
-                    className="flex items-center gap-2 text-resonance-muted hover:text-resonance-gold transition-colors"
-                  >
-                    <Heart size={16} />
-                    <span className="text-xs font-ui">{story.likes_count}</span>
-                  </button>
-                  <button className="flex items-center gap-2 text-resonance-muted hover:text-resonance-gold transition-colors">
-                    <MessageSquare size={16} />
-                    <span className="text-xs font-ui">0 Comments</span>
-                  </button>
-                </div>
+      {/* Content Rendering */}
+      <main className="min-h-[60vh]">
+        {activeTab === 'stories' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Share Story CTA */}
+            <div className="bg-resonance-surface rounded-2xl p-8 border border-resonance-border relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Plus size={80} className="text-resonance-gold" />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              
+              <h3 className="text-xl font-display text-resonance-cream mb-4">Share Your Journey</h3>
+              <p className="text-resonance-muted font-body mb-6 max-w-2xl">
+                How has your frequency shifted? Be real, not perfect. Your vulnerability creates permission for others to do the same.
+              </p>
+              
+              <div className="space-y-4 relative z-10">
+                <textarea
+                  value={newStory}
+                  onChange={(e) => setNewStory(e.target.value)}
+                  placeholder="What moment of resonance did you experience today?"
+                  className="w-full bg-resonance-bg border border-resonance-border rounded-xl p-4 text-resonance-cream font-ui focus:border-resonance-gold focus:outline-none transition-colors min-h-[120px]"
+                />
+                <input 
+                  type="text"
+                  value={impact}
+                  onChange={(e) => setImpact(e.target.value)}
+                  placeholder="Briefly, what was the impact?"
+                  className="w-full bg-resonance-bg border border-resonance-border rounded-xl p-4 text-resonance-cream font-ui focus:border-resonance-gold focus:outline-none transition-colors"
+                />
+                <button
+                  onClick={handleShareStory}
+                  disabled={isPosting || !newStory.trim()}
+                  className="bg-resonance-gold hover:brightness-110 text-resonance-bg px-8 py-3 rounded-full font-ui font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isPosting ? 'Sending...' : 'Share My Story'}
+                </button>
+              </div>
+            </div>
 
-      {/* Circles & Discussions (Placeholders for now, styled for dark theme) */}
-      {(activeTab === 'circles' || activeTab === 'discussions') && (
-        <div className="bg-resonance-surface p-16 rounded-2xl border border-resonance-border text-center shadow-xl">
-          {activeTab === 'circles' ? (
-            <Users className="w-16 h-16 text-resonance-gold mx-auto mb-6 opacity-80" />
-          ) : (
-            <MessageSquare className="w-16 h-16 text-resonance-gold mx-auto mb-6 opacity-80" />
-          )}
-          <h3 className="text-2xl font-display text-resonance-cream mb-4">The Collective Field is Awakening</h3>
-          <p className="text-resonance-muted font-body mb-8 max-w-xl mx-auto">
-            {activeTab === 'circles' 
-              ? "Small, intimate groups built around shared resonance—not demographics. Find your frequency."
-              : "Ongoing discussions about consciousness, presence, and collective awakening. Share your depth."}
-          </p>
-          <div className="px-6 py-2 bg-resonance-bg border border-resonance-gold/20 text-resonance-gold rounded-full w-fit mx-auto text-xs font-ui uppercase tracking-widest">
-            Coming Soon to the Field
+            {/* Story Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
+              {isLoading && stories.length === 0 ? (
+                [1, 2, 3, 4].map(i => (
+                  <div key={i} className="h-64 bg-resonance-surface border border-resonance-border rounded-2xl animate-pulse" />
+                ))
+              ) : stories.map(story => (
+                <StoryCard key={story.id} story={story} onUpdate={fetchStories} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {activeTab === 'circles' && <CircleList />}
+        {activeTab === 'discussions' && <DiscussionSection />}
+      </main>
     </div>
   );
 };
