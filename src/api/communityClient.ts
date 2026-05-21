@@ -133,6 +133,30 @@ export async function joinCircle(circleId: string) {
   if (error) throw error;
 }
 
+export async function createCircle(name: string, description: string, isPrivate: boolean = false) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const { data, error } = await supabase
+    .from('circles')
+    .insert({
+      name,
+      description,
+      is_private: isPrivate,
+      creator_id: user.id,
+      coherence_score: 0
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Auto-join the creator
+  await joinCircle(data.id);
+
+  return data;
+}
+
 // Discussions
 export async function fetchThreads(topicId?: string) {
   let query = supabase
@@ -153,4 +177,23 @@ export async function fetchThreads(topicId?: string) {
     ...t,
     username: (t as any).profiles?.username || 'Anonymous Seeker'
   }));
+}
+
+export async function createThread(title: string, content: string, topicId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const { data, error } = await supabase
+    .from('discussion_threads')
+    .insert({
+      title,
+      content,
+      topic_id: topicId,
+      user_id: user.id
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }

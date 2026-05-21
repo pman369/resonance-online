@@ -20,6 +20,7 @@ const ShadowIntegration = lazy(() => import('./components/ShadowIntegration'));
 const PresenceProtocols = lazy(() => import('./components/PresenceProtocols'));
 const RadicalTransparency = lazy(() => import('./components/RadicalTransparency'));
 const CommunityHub = lazy(() => import('./components/CommunityHub'));
+const StoriesFeed = lazy(() => import('./components/community/stories/StoriesFeed'));
 const UserJourneyHistory = lazy(() => import('./components/History'));
 const ProfilePage = lazy(() => import('./components/profile/ProfilePage'));
 const SettingsPage = lazy(() => import('./components/settings/SettingsPage'));
@@ -154,7 +155,7 @@ const ResonanceApp: React.FC = () => {
               <Route path="/wisdom" element={<AncientWisdom />} />
               <Route path="/coherence" element={<CollectiveCoherence />} />
               <Route path="/shadow" element={<ShadowIntegration />} />
-              <Route path="/feed" element={<CommunityHub />} />
+              <Route path="/feed" element={<StoriesFeed />} />
               <Route path="/history" element={<UserJourneyHistory />} />
               <Route path="/community" element={<CommunityHub />} />
               <Route path="/transparency" element={<RadicalTransparency />} />

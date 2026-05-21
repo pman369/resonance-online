@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Shield, ArrowRight, Zap } from 'lucide-react';
-import { Circle, fetchCircles, joinCircle } from '../../../api/communityClient';
+import { Users, Plus, Shield, ArrowRight, Zap, X } from 'lucide-react';
+import { Circle, fetchCircles, joinCircle, createCircle } from '../../../api/communityClient';
 import { useAuth } from '../../../lib/AuthContext';
 
 export const CircleList: React.FC = () => {
   const { user } = useAuth();
   const [circles, setCircles] = useState<Circle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form states
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
     loadCircles();
@@ -28,9 +35,28 @@ export const CircleList: React.FC = () => {
     if (!user) return;
     try {
       await joinCircle(id);
-      loadCircles(); // Refresh to show membership or updated counts
+      loadCircles();
     } catch (err) {
       console.error('Error joining circle:', err);
+    }
+  };
+
+  const handleCreateCircle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await createCircle(name.trim(), description.trim(), isPrivate);
+      setShowCreateModal(false);
+      setName('');
+      setDescription('');
+      setIsPrivate(false);
+      loadCircles();
+    } catch (err) {
+      console.error('Error creating circle:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -41,10 +67,69 @@ export const CircleList: React.FC = () => {
           <h3 className="text-xl font-display text-resonance-cream mb-1">Explore Circles</h3>
           <p className="text-xs font-ui text-resonance-muted uppercase tracking-widest">Find your resonant frequency</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-2 border border-resonance-gold/30 text-resonance-gold rounded-full font-ui text-[10px] uppercase tracking-[0.2em] hover:bg-resonance-gold/10 transition-all">
+        <button 
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-6 py-2 border border-resonance-gold/30 text-resonance-gold rounded-full font-ui text-[10px] uppercase tracking-[0.2em] hover:bg-resonance-gold/10 transition-all"
+        >
           <Plus size={14} /> Create Circle
         </button>
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-resonance-bg/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-resonance-surface w-full max-w-md rounded-2xl border border-resonance-border p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="text-xl font-display text-resonance-cream">Initiate Sector</h4>
+              <button onClick={() => setShowCreateModal(false)} className="text-resonance-muted hover:text-resonance-gold transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCircle} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-ui uppercase tracking-widest text-resonance-gold">Circle Name</label>
+                <input 
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., The Shadow Workers"
+                  className="w-full bg-resonance-bg border border-resonance-border rounded-xl px-4 py-3 text-resonance-cream font-ui focus:border-resonance-gold focus:outline-none transition-colors"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-ui uppercase tracking-widest text-resonance-gold">Focus / Theme</label>
+                <textarea 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What wavelength does this circle broadcast on?"
+                  className="w-full bg-resonance-bg border border-resonance-border rounded-xl px-4 py-3 text-resonance-cream font-ui focus:border-resonance-gold focus:outline-none transition-colors min-h-[100px]"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsPrivate(!isPrivate)}
+                  className={`w-10 h-6 rounded-full transition-colors relative ${isPrivate ? 'bg-resonance-gold' : 'bg-resonance-border'}`}
+                >
+                  <div className={`absolute top-1 left-1 w-4 h-4 bg-resonance-bg rounded-full transition-transform ${isPrivate ? 'translate-x-4' : ''}`} />
+                </button>
+                <span className="text-xs font-ui text-resonance-muted">Private Sector (Invitation Only)</span>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={isSubmitting || !name.trim()}
+                className="w-full bg-resonance-gold text-resonance-bg py-3 rounded-xl font-ui font-bold uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {isSubmitting ? 'Manifesting...' : 'Establish Circle'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
