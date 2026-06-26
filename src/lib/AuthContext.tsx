@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('✅ AuthProvider: Session loaded:', session?.user?.email || 'No user');
       }
-      setSession(session);
+      setSession(session ?? null);
       setUser(session?.user ?? null);
       setLoading(false);
     }).catch(err => {
@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.email);
-      setSession(session);
+      console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user session');
+      setSession(session ?? null);
       setUser(session?.user ?? null);
       setLoading(false);
     });

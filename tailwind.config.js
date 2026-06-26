@@ -9,18 +9,24 @@ export default {
 
       colors: {
         resonance: {
-          bg: '#0f0f0f',
-          surface: '#161410',
-          gold: '#C9A96E',
-          cream: '#EDE8DF',
-          muted: '#7D7568',
-          border: '#2A2620',
-          danger: '#8B3A3A',
+          bg: '#05050a',
+          surface: '#0d0d1a',
+          gold: '#00E5FF', // Map legacy gold references to brand Cyan
+          cream: '#EDEBF5', // Brighter, cool-toned cream
+          muted: '#7C7A94', // Cool indigo-muted gray
+          border: '#1b1a30', // Indigo border
+          danger: '#FF4081', // Hot pink for warnings/danger
+          cyan: '#00E5FF',
+          cobalt: '#2962FF',
+          deeppurple: '#6200EA',
+          violet: '#AA00FF',
+          magenta: '#D500F9',
+          hotpink: '#FF4081',
         }
       },
       fontFamily: {
-        display: ['"Cormorant Garamond"', 'serif'],
-        body: ['Lora', 'serif'],
+        display: ['Outfit', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
         ui: ['"DM Sans"', 'sans-serif'],
       },
       animation: {

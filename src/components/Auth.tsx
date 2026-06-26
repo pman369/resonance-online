@@ -65,8 +65,8 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
       {/* Hero Visual Area */}
       <div className="relative w-full md:w-1/2 lg:w-[60%] h-[30vh] md:h-screen bg-resonance-surface overflow-hidden border-b md:border-b-0 md:border-r border-resonance-border">
         {/* Generative Visual (using CSS gradients for extreme performance/vibes) */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(201,169,110,0.15)_0%,transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,transparent_0deg,rgba(201,169,110,0.05)_180deg,transparent_360deg)] animate-spin-slow"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(0,229,255,0.12)_0%,transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,transparent_0deg,rgba(170,0,255,0.06)_180deg,transparent_360deg)] animate-spin-slow"></div>
         
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center z-10">
           <motion.div

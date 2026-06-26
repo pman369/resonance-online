@@ -6,7 +6,7 @@ const Hero: React.FC = () => (
   <section className="relative min-h-screen flex flex-col items-center justify-center text-center bg-resonance-bg overflow-hidden">
     {/* Ambient gradient overlay */}
     <div className="absolute inset-0 pointer-events-none">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(201,169,110,0.15),transparent_70%)] animate-float" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(0,229,255,0.12),transparent_70%)] animate-float" />
     </div>
     {/* Top navigation is rendered separately */}
     <h1 className="text-6xl md:text-8xl font-display text-resonance-cream mb-6 animate-fade-in-up">

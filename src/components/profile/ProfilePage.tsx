@@ -58,7 +58,7 @@ export default function ProfilePage() {
       {/* Hero Section */}
       <section className="relative rounded-3xl overflow-hidden border border-resonance-border shadow-2xl bg-resonance-surface">
         <div className="h-48 bg-gradient-to-br from-resonance-surface via-resonance-bg to-resonance-surface border-b border-resonance-border relative">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(201,169,110,0.08)_0%,transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(0,229,255,0.06)_0%,transparent_60%)]" />
           <div className="absolute right-12 top-1/2 -translate-y-1/2 text-[8rem] text-resonance-border/30 font-display pointer-events-none select-none">
             ✧
           </div>

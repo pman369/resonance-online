@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { checkBackendHealth, incrementGlobalCoherence } from './api/client';
 import { useAuth } from './lib/AuthContext';
 import { supabase } from './lib/supabase';
@@ -8,6 +8,12 @@ import LoadingFallback from './components/LoadingFallback';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { WifiOff } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
+
+// Singular Portal Additions
+import { audioEngine } from './utils/audioEngine';
+import MetatronsCube from './components/MetatronsCube';
+import PortalNavigation from './components/PortalNavigation';
+import { motion } from 'framer-motion';
 
 // Lazy loaded views
 const HomeView = lazy(() => import('./components/Dashboard'));
@@ -24,6 +30,7 @@ const StoriesFeed = lazy(() => import('./components/community/stories/StoriesFee
 const UserJourneyHistory = lazy(() => import('./components/History'));
 const ProfilePage = lazy(() => import('./components/profile/ProfilePage'));
 const SettingsPage = lazy(() => import('./components/settings/SettingsPage'));
+const SettingsPageTab = lazy(() => import('./components/settings/SettingsPage'));
 
 import { Analysis, ShadowData } from './api/client';
 
@@ -39,6 +46,7 @@ interface UserData {
 
 // Main App Component
 const ResonanceApp: React.FC = () => {
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [userData, setUserData] = useState<UserData>({
     journalEntries: [],
@@ -49,8 +57,12 @@ const ResonanceApp: React.FC = () => {
     coherenceContribution: 0
   });
   const [globalCoherence, setGlobalCoherence] = useState(73542);
-
   const [onlineUsersCount, setOnlineUsersCount] = useState(0);
+
+  // Singular Portal States
+  const [portalActive, setPortalActive] = useState(true);
+  const [portalIntensity, setPortalIntensity] = useState<'neutral' | 'high-resistance' | 'reflective' | 'low-intensity'>('neutral');
+  const [isExiting, setIsExiting] = useState(false);
 
   // Check backend health on mount
   useEffect(() => {
@@ -62,6 +74,18 @@ const ResonanceApp: React.FC = () => {
         console.warn('⚠️  Backend not available. AI features will use fallback mode.', err);
       });
   }, []);
+
+  // Manage Web Audio hum based on presence & user activity
+  useEffect(() => {
+    if (user && portalActive && !isExiting) {
+      audioEngine.startAmbientHum();
+    } else {
+      audioEngine.stopAmbientHum();
+    }
+    return () => {
+      audioEngine.stopAmbientHum();
+    };
+  }, [user, portalActive, isExiting]);
 
   // Subscribe to real-time global coherence and presence updates
   useEffect(() => {
@@ -117,14 +141,35 @@ const ResonanceApp: React.FC = () => {
     }));
   }, []);
 
+  // Intercept signout to run the Presence-First exit/decay transition
+  const handleSignOut = async () => {
+    setIsExiting(true);
+    audioEngine.playDecayExitSound(3.5);
+    setTimeout(async () => {
+      audioEngine.stopAmbientHum();
+      try {
+        await signOut();
+      } catch (err) {
+        console.error('Failed to sign out', err);
+      } finally {
+        setIsExiting(false);
+      }
+    }, 3500);
+  };
+
   const isOnline = useOfflineStatus();
 
   return (
     <div className="min-h-screen bg-resonance-bg text-resonance-cream selection:bg-resonance-gold selection:text-resonance-bg">
-      <Navigation onSignOut={signOut} userEmail={user?.email} />
+      <Navigation 
+        onSignOut={handleSignOut} 
+        userEmail={user?.email} 
+        portalActive={portalActive}
+        onTogglePortal={setPortalActive}
+      />
       
       {!isOnline && (
-        <div className="fixed top-20 left-0 right-0 z-50 bg-resonance-danger/90 text-resonance-cream py-2 px-4 flex items-center justify-center gap-3 backdrop-blur-md animate-in slide-in-from-top duration-500">
+        <div className="fixed top-20 left-0 right-0 z-40 bg-resonance-danger/90 text-resonance-cream py-2 px-4 flex items-center justify-center gap-3 backdrop-blur-md animate-in slide-in-from-top duration-500">
           <WifiOff size={16} className="animate-pulse" />
           <span className="text-xs font-ui uppercase tracking-widest font-bold">You are currently offline. Some features may be limited.</span>
         </div>
@@ -136,19 +181,35 @@ const ResonanceApp: React.FC = () => {
             <Routes>
               <Route index element={<Navigate to="/home" replace />} />
               <Route path="/home" element={
-                <HomeView 
-                  globalCoherence={globalCoherence} 
-                  activeParticipants={onlineUsersCount}
-                  coherenceContribution={userData.coherenceContribution} 
-                  onContribute={async () => {
-                    setUserData(prev => ({ ...prev, coherenceContribution: prev.coherenceContribution + 1 }));
-                    try {
-                      await incrementGlobalCoherence(1);
-                    } catch (err) {
-                      console.error('Failed to sync coherence contribution', err);
-                    }
-                  }}
-                />
+                portalActive ? (
+                  <div className="relative min-h-[70vh] flex flex-col items-center justify-center overflow-hidden">
+                    <MetatronsCube 
+                      isMirroring={isExiting || portalIntensity !== 'neutral'} 
+                      intensity={portalIntensity} 
+                    />
+                    <PortalNavigation 
+                      onNavigate={(route, _intensity) => {
+                        navigate(route);
+                      }}
+                      activeIntensity={portalIntensity}
+                      setIntensity={setPortalIntensity}
+                    />
+                  </div>
+                ) : (
+                  <HomeView 
+                    globalCoherence={globalCoherence} 
+                    activeParticipants={onlineUsersCount}
+                    coherenceContribution={userData.coherenceContribution} 
+                    onContribute={async () => {
+                      setUserData(prev => ({ ...prev, coherenceContribution: prev.coherenceContribution + 1 }));
+                      try {
+                        await incrementGlobalCoherence(1);
+                      } catch (err) {
+                        console.error('Failed to sync coherence contribution', err);
+                      }
+                    }}
+                  />
+                )
               } />
               <Route path="/mapping" element={<ConsciousnessMapping onAnalysisComplete={handleAnalysisComplete} />} />
               <Route path="/synchronicity" element={<SynchronicityEngine />} />
@@ -163,7 +224,7 @@ const ResonanceApp: React.FC = () => {
               <Route path="/presence" element={<PresenceProtocols />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/:tab" element={<SettingsPage />} />
+              <Route path="/settings/:tab" element={<SettingsPageTab />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           </Suspense>
@@ -180,6 +241,22 @@ const ResonanceApp: React.FC = () => {
           </p>
         </div>
       </footer>
+
+      {/* Presence-First Exit Decay Transition Screen */}
+      {isExiting && (
+        <div className="fixed inset-0 bg-[#05050a] z-[9999] flex flex-col items-center justify-center">
+          <MetatronsCube isMirroring={true} intensity="high-resistance" />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.5 }}
+            className="text-center z-10 px-4"
+          >
+            <p className="font-display text-4xl text-[#EDE8DF] tracking-widest mb-3 uppercase">Pure Presence</p>
+            <p className="font-body text-[#EDE8DF]/50 italic text-base">Decaying back to the source field. Integrate well offline.</p>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

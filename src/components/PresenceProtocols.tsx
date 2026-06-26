@@ -128,7 +128,7 @@ const PresenceProtocols: React.FC = () => {
           >
             {/* Core Intention */}
             <div className="bg-resonance-surface/50 p-12 rounded-[40px] border border-resonance-gold/20 shadow-2xl relative overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,169,110,0.05)_0%,transparent_70%)]"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,229,255,0.05)_0%,transparent_70%)]"></div>
               <div className="flex flex-col items-center text-center relative z-10">
                 <Heart className="w-8 h-8 text-resonance-gold mb-6 opacity-50" />
                 <h3 className="text-[10px] font-ui uppercase tracking-[0.4em] text-resonance-gold mb-6">Today's Sacred Aim</h3>

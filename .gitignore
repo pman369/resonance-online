@@ -35,7 +35,7 @@ dist-ssr
 .env*.local
 .env
 
-.qwen/*
+.opencode/*
 .gemini/*
 # GEMINI.md - removed from ignore to allow redacted version
 

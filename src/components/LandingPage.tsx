@@ -54,8 +54,12 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, blu
   );
 };
 
-const AuthModule: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true); // Default to login as it's cleaner
+interface AuthModuleProps {
+  isLogin: boolean;
+  setIsLogin: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const AuthModule: React.FC<AuthModuleProps> = ({ isLogin, setIsLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -66,16 +70,23 @@ const AuthModule: React.FC = () => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('✉️ AuthModule: handleAuth triggered', { isLogin, email, hasPassword: !!password, username });
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        console.log('🔑 AuthModule: Attempting signInWithPassword...');
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          console.error('❌ AuthModule: signInWithPassword failed:', error.message);
+          throw error;
+        }
+        console.log('✅ AuthModule: signInWithPassword success:', data.user?.email);
       } else {
-        const { error } = await supabase.auth.signUp({
+        console.log('🌱 AuthModule: Attempting signUp...');
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -85,11 +96,15 @@ const AuthModule: React.FC = () => {
             },
           },
         });
-        if (error) throw error;
+        if (error) {
+          console.error('❌ AuthModule: signUp failed:', error.message);
+          throw error;
+        }
+        console.log('✅ AuthModule: signUp success:', data.user?.email);
         setSuccessMsg('Check your email for the confirmation link! ✨');
       }
     } catch (err: any) {
-      setErrorMsg(err.message);
+      setErrorMsg(err.message || 'An unexpected authentication error occurred.');
     } finally {
       setLoading(false);
     }
@@ -225,6 +240,7 @@ const AuthModule: React.FC = () => {
 };
 
 export default function LandingPage() {
+  const [isLogin, setIsLogin] = useState(true);
   const [showStickyNav, setShowStickyNav] = useState(false);
   const [showMobileCTA, setShowMobileCTA] = useState(false);
 
@@ -244,6 +260,11 @@ export default function LandingPage() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const scrollToAuth = (loginMode: boolean) => {
+    setIsLogin(loginMode);
+    document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-resonance-bg text-resonance-cream relative selection:bg-resonance-gold selection:text-resonance-bg overflow-x-hidden">
@@ -270,8 +291,18 @@ export default function LandingPage() {
         <nav className={`fixed top-0 left-0 right-0 z-40 px-6 md:px-12 py-6 flex justify-between items-center transition-all duration-500 ${showStickyNav ? 'bg-resonance-bg/80 backdrop-blur-md border-b border-resonance-border' : ''}`}>
           <div className="font-display uppercase tracking-[0.15em] text-lg">Resonance</div>
           <div className="flex items-center gap-6">
-            <button className="font-ui text-sm text-resonance-cream hover:text-resonance-gold transition-colors hidden sm:block">Sign In</button>
-            <a href="#auth" className="font-ui text-sm px-6 py-2 bg-resonance-gold text-resonance-bg rounded-full font-semibold hover:brightness-110 transition-all">Join</a>
+            <button 
+              onClick={() => scrollToAuth(true)}
+              className="font-ui text-sm text-resonance-cream hover:text-resonance-gold transition-colors hidden sm:block"
+            >
+              Sign In
+            </button>
+            <button 
+              onClick={() => scrollToAuth(false)}
+              className="font-ui text-sm px-6 py-2 bg-resonance-gold text-resonance-bg rounded-full font-semibold hover:brightness-110 transition-all"
+            >
+              Join
+            </button>
           </div>
         </nav>
 
@@ -307,9 +338,12 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 1 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <a href="#auth" className="px-8 py-4 bg-resonance-gold text-resonance-bg font-ui font-semibold rounded-full hover:brightness-110 transition-all">
+            <button 
+              onClick={() => scrollToAuth(false)}
+              className="px-8 py-4 bg-resonance-gold text-resonance-bg font-ui font-semibold rounded-full hover:brightness-110 transition-all"
+            >
               Begin Your Journey
-            </a>
+            </button>
             <button className="px-8 py-4 bg-transparent text-resonance-cream font-ui font-semibold flex items-center justify-center gap-2 hover:text-resonance-gold transition-colors group">
               Learn What This Is <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </button>
@@ -415,9 +449,12 @@ export default function LandingPage() {
         </div>
         <div className="text-center">
           <p className="font-display text-2xl mb-8 text-resonance-muted">Ready to experience this?</p>
-          <a href="#auth" className="px-8 py-4 bg-resonance-gold text-resonance-bg font-ui font-semibold rounded-full hover:brightness-110 transition-all inline-block">
+          <button 
+            onClick={() => scrollToAuth(false)}
+            className="px-8 py-4 bg-resonance-gold text-resonance-bg font-ui font-semibold rounded-full hover:brightness-110 transition-all inline-block"
+          >
             Create Your Free Account
-          </a>
+          </button>
         </div>
       </section>
 
@@ -497,7 +534,7 @@ export default function LandingPage() {
       </section>
 
       {/* Auth Section */}
-      <AuthModule />
+      <AuthModule isLogin={isLogin} setIsLogin={setIsLogin} />
 
       {/* Mobile Sticky CTA Bar */}
       <AnimatePresence>
@@ -508,12 +545,12 @@ export default function LandingPage() {
             exit={{ y: 100 }}
             className="fixed bottom-0 left-0 right-0 z-40 p-4 md:hidden"
           >
-            <a 
-              href="#auth" 
+            <button 
+              onClick={() => scrollToAuth(false)}
               className="w-full py-4 bg-resonance-gold text-resonance-bg font-ui font-bold rounded-full shadow-2xl flex items-center justify-center active:scale-[0.98] transition-transform"
             >
               Join Free
-            </a>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

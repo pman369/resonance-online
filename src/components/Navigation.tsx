@@ -7,9 +7,11 @@ import { useProfile } from '../hooks/useProfile';
 interface NavigationProps {
   onSignOut: () => void;
   userEmail?: string | null;
+  portalActive: boolean;
+  onTogglePortal: (active: boolean) => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onSignOut, userEmail }) => {
+const Navigation: React.FC<NavigationProps> = ({ onSignOut, userEmail, portalActive, onTogglePortal }) => {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const [tooltip, setTooltip] = useState<{ text: string; visible: boolean }>({ text: '', visible: false });
@@ -68,22 +70,45 @@ const Navigation: React.FC<NavigationProps> = ({ onSignOut, userEmail }) => {
 
         {/* Icon Navigation */}
         <div className="flex gap-1.5 items-center">
-          {navItems.map(item => (
-            <NavLink
-              key={item.id}
-              to={item.path}
-              onMouseEnter={(e) => handleMouseEnter(e, item.tooltip)}
-              onMouseLeave={handleMouseLeave}
-              className={({ isActive }) => `w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                isActive
-                  ? 'bg-resonance-gold text-resonance-bg shadow-[0_0_15px_rgba(201,169,110,0.3)]'
-                  : 'text-resonance-muted hover:text-resonance-cream hover:bg-resonance-border'
-              }`}
-              aria-label={item.label}
-            >
-              <item.icon className="w-4.5 h-4.5" />
-            </NavLink>
-          ))}
+          {portalActive ? (
+            <div className="flex items-center gap-3 mr-3">
+              <span className="text-[10px] font-ui uppercase tracking-widest text-[#00E5FF] animate-pulse flex items-center gap-1.5 bg-[#00E5FF]/10 px-3 py-1 rounded-full border border-[#00E5FF]/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] animate-ping" />
+                Singular Portal Active
+              </span>
+              <button 
+                onClick={() => onTogglePortal(false)}
+                className="text-xs font-ui uppercase tracking-widest text-resonance-muted hover:text-resonance-gold px-2.5 py-1.5 rounded-lg border border-resonance-border bg-resonance-surface/50 hover:bg-resonance-border transition-all"
+              >
+                Dev Nav
+              </button>
+            </div>
+          ) : (
+            <>
+              {navItems.map(item => (
+                <NavLink
+                  key={item.id}
+                  to={item.path}
+                  onMouseEnter={(e) => handleMouseEnter(e, item.tooltip)}
+                  onMouseLeave={handleMouseLeave}
+                  className={({ isActive }) => `w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isActive
+                      ? 'bg-resonance-gold text-resonance-bg shadow-[0_0_15px_rgba(0,229,255,0.35)]'
+                      : 'text-resonance-muted hover:text-resonance-cream hover:bg-resonance-border'
+                  }`}
+                  aria-label={item.label}
+                >
+                  <item.icon className="w-4.5 h-4.5" />
+                </NavLink>
+              ))}
+              <button 
+                onClick={() => onTogglePortal(true)}
+                className="text-xs font-ui uppercase tracking-widest text-[#00E5FF] hover:text-[#D500F9] px-2.5 py-1.5 rounded-lg border border-[#00E5FF]/20 bg-[#00E5FF]/5 hover:bg-[#00E5FF]/10 transition-all ml-2"
+              >
+                Portal
+              </button>
+            </>
+          )}
 
           {/* User Menu */}
           <div className="relative ml-3 pl-3 border-l border-resonance-border user-menu-container">
